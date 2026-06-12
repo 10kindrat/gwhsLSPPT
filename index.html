@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자일리톨 탐구 발표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Tokens ── */
+:root {
+  --bg:       #F5F7F9;
+  --surface:  #FFFFFF;
+  --grid:     rgba(43,122,158,.07);
+  --blue:     #2B7A9E;
+  --blue-lt:  #E4F2F8;
+  --orange:   #E05A2B;
+  --orange-lt:#FEF0EA;
+  --green:    #2A8A5A;
+  --green-lt: #E6F5EE;
+  --ink:      #1A2530;
+  --ink-mid:  #4A6070;
+  --ink-faint:#9DB4C0;
+  --border:   #D6E4EC;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Noto Sans KR', sans-serif;
+  --ease: cubic-bezier(.4,0,.2,1);
+}
+
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); }
+
+/* ── Viewport scaler ── */
+#root {
+  width:100vw; height:100vh;
+  display:flex; align-items:center; justify-content:center;
+}
+#deck {
+  width:1280px; height:720px;
+  position:relative;
+  transform-origin:center center;
+}
+
+/* ── Slide base ── */
+.slide {
+  position:absolute; inset:0;
+  background:var(--bg);
+  display:none;
+  overflow:hidden;
+  /* lab grid */
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:40px 40px;
+}
+.slide.active { display:flex; }
+
+/* ── Slide-in animation ── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.slide.active .anim { animation: fadeUp .45s var(--ease) both; }
+.slide.active .anim:nth-child(1) { animation-delay:.05s; }
+.slide.active .anim:nth-child(2) { animation-delay:.15s; }
+.slide.active .anim:nth-child(3) { animation-delay:.25s; }
+.slide.active .anim:nth-child(4) { animation-delay:.35s; }
+.slide.active .anim:nth-child(5) { animation-delay:.45s; }
+
+/* ── White card panel ── */
+.panel {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+}
+
+/* ── Top bar (slide header) ── */
+.topbar {
+  position:absolute; top:0; left:0; right:0;
+  height:52px;
+  background:var(--surface);
+  border-bottom:2px solid var(--border);
+  display:flex; align-items:center;
+  padding:0 48px;
+  gap:16px;
+  z-index:10;
+}
+.topbar-tag {
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.14em;
+  color:var(--blue);
+  background:var(--blue-lt);
+  padding:3px 10px;
+  border-radius:20px;
+}
+.topbar-title {
+  font-size:15px;
+  font-weight:700;
+  color:var(--ink);
+}
+.topbar-right {
+  margin-left:auto;
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--ink-faint);
+}
+
+/* ── Big number ── */
+.bignumber {
+  font-family:var(--mono);
+  font-weight:500;
+  line-height:1;
+}
+
+/* ── pH badge ── */
+.ph-badge {
+  display:inline-flex; flex-direction:column; align-items:center;
+  padding:12px 20px;
+  border-radius:12px;
+  min-width:90px;
+}
+.ph-badge .label { font-family:var(--mono); font-size:10px; letter-spacing:.1em; margin-bottom:4px; }
+.ph-badge .val   { font-family:var(--mono); font-size:28px; font-weight:500; line-height:1; }
+
+/* ── Image card ── */
+.img-card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  display:flex; flex-direction:column;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+.img-card img { width:100%; flex:1; object-fit:cover; display:block; }
+.img-card .cap {
+  padding:10px 14px;
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.06em;
+  color:var(--ink-mid);
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  text-align:center;
+}
+
+/* ── Arrow ── */
+.arrow {
+  font-size:28px; color:var(--ink-faint);
+  display:flex; align-items:center; flex-shrink:0;
+}
+
+/* ── Nav ── */
+#nav { display:none; }
+
+/* ── Click / swipe zones ── */
+#click-zones {
+  position:fixed; inset:0;
+  display:flex;
+  z-index:500;
+}
+#click-zones .zone {
+  height:100%;
+  cursor:pointer;
+}
+#click-zones .zone.left  { width:33.333%; }
+#click-zones .zone.center{ width:33.334%; cursor:default; }
+#click-zones .zone.right { width:33.333%; }
+
+
+/* ════════════════════════════════════════
+   SLIDE-SPECIFIC LAYOUTS
+════════════════════════════════════════ */
+
+/* S1 · 표지 */
+#s1 { flex-direction:row; }
+#s1 .left {
+  width:52%; height:100%;
+  padding:52px 48px;
+  display:flex; flex-direction:column; justify-content:center;
+  background:var(--surface);
+  border-right:2px solid var(--border);
+}
+#s1 .right {
+  flex:1; height:100%;
+  display:flex; flex-direction:column;
+  padding:52px 40px 52px 44px;
+  justify-content:center; gap:20px;
+}
+#s1 .kw {
+  font-size:72px; font-weight:900;
+  line-height:.95; letter-spacing:-.03em;
+  color:var(--ink);
+}
+#s1 .kw span { color:var(--blue); }
+#s1 .sub { font-size:18px; color:var(--ink-mid); margin-top:16px; line-height:1.5; font-weight:400; }
+#s1 .meta { font-size:14px; color:var(--ink-faint); margin-top:32px; font-family:var(--mono); }
+#s1 .preview-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:10px; width:100%;
+}
+#s1 .preview-grid .img-card { height:160px; }
+#s1 .preview-grid .img-card img { height:130px; }
+#s1 .tag-row { display:flex; gap:8px; flex-wrap:wrap; }
+#s1 .tag {
+  font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+  padding:4px 12px; border-radius:20px; font-weight:500;
+}
+
+/* S2 · 이론 */
+#s2 { padding:60px 48px 48px; flex-direction:column; }
+#s2 .body-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; flex:1; }
+#s2 .theory-card {
+  padding:28px 28px;
+  border-radius:16px;
+  height:100%;
+  display:flex; flex-direction:column; gap:14px;
+}
+#s2 .theory-card .headline { font-size:32px; font-weight:900; line-height:1.1; }
+#s2 .theory-card .desc { font-size:16px; color:var(--ink-mid); line-height:1.7; }
+#s2 .flow {
+  display:flex; align-items:center; gap:10px;
+  flex-wrap:wrap;
+}
+#s2 .flow-item {
+  background:var(--surface); border:1px solid var(--border);
+  padding:6px 14px; border-radius:8px;
+  font-size:14px; font-weight:700; color:var(--ink);
+}
+#s2 .flow-arrow { color:var(--ink-faint); font-size:16px; }
+
+/* S3 · pH 실험 전 (0h) */
+#s3 { padding:60px 48px 40px; flex-direction:column; gap:24px; }
+#s3 .ph-row {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:20px; flex:1;
+}
+#s3 .ph-col { display:flex; flex-direction:column; gap:12px; align-items:center; }
+#s3 .img-card { width:100%; flex:1; }
+#s3 .img-card img { height:260px; }
+
+/* S4 · pH 실험 후 (70h) */
+#s4 { padding:60px 48px 32px; flex-direction:column; gap:16px; }
+#s4 .ph-row {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:20px; flex:1;
+}
+#s4 .ph-col { display:flex; flex-direction:column; gap:12px; align-items:center; }
+#s4 .img-card { width:100%; flex:none; }
+#s4 .img-card img { height:180px; flex:none; }
+
+/* pH 변화 강조 숫자 */
+.delta {
+  font-family:var(--mono); font-size:22px; font-weight:500;
+  display:flex; align-items:center; gap:6px;
+}
+
+/* S5 · 시험관 비교 (Before → After) */
+#s5 { padding:60px 48px 40px; flex-direction:column; gap:20px; }
+#s5 .tt-row {
+  display:flex; align-items:stretch; gap:24px; flex:1;
+}
+#s5 .tt-col {
+  flex:1; display:flex; flex-direction:column; gap:12px; align-items:center;
+}
+#s5 .img-card { width:100%; flex:1; }
+#s5 .img-card img { height:340px; }
+#s5 .arrow-col {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:8px; width:72px;
+}
+#s5 .big-arrow {
+  font-size:40px; color:var(--blue);
+}
+#s5 .time-label {
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--ink-faint);
+  writing-mode:vertical-rl; text-orientation:mixed;
+}
+
+/* S6 · 결론 */
+#s6 { padding:60px 48px 48px; flex-direction:column; gap:24px; }
+#s6 .conc-grid {
+  display:grid; grid-template-columns:1fr 1fr 1fr;
+  gap:20px; flex:1;
+}
+#s6 .conc-card {
+  padding:28px; border-radius:16px;
+  display:flex; flex-direction:column; justify-content:space-between;
+  height:100%;
+}
+#s6 .conc-card .headline { font-size:26px; font-weight:900; line-height:1.1; margin-bottom:10px; }
+#s6 .conc-card .point { font-size:15px; color:var(--ink-mid); line-height:1.7; }
+#s6 .conc-card .ph-final {
+  font-family:var(--mono); font-size:52px; font-weight:500;
+  line-height:1; margin-top:16px;
+}
+
+/* shared section title */
+.sec-title {
+  font-size:28px; font-weight:900; color:var(--ink); letter-spacing:-.01em;
+  flex-shrink:0;
+}
+.sec-tag {
+  font-family:var(--mono); font-size:11px; letter-spacing:.12em;
+  color:var(--blue); background:var(--blue-lt);
+  padding:3px 10px; border-radius:20px; display:inline-block;
+  margin-bottom:8px;
+}
+</style>
+</head>
+<body>
+<div id="root">
+<div id="deck">
+
+<!-- ═══════════════════════════════════
+     S1 · 표지
+═══════════════════════════════════ -->
+<div class="slide" id="s1">
+  <div class="left">
+    <div class="anim tag-row">
+      <span class="tag" style="background:var(--blue-lt);color:var(--blue);">생명과학실험</span>
+      <span class="tag" style="background:var(--orange-lt);color:var(--orange);">2026. 06. 12</span>
+    </div>
+    <div class="anim kw" style="margin-top:24px;">
+      자일리톨<br>vs<br><span>설탕</span>
+    </div>
+    <div class="anim sub">젖산 발효 & 치아 우식 억제 효능 분석</div>
+    <div class="anim meta">
+      고하준 (30102) · The lactic way<br>
+      김승원 · 이기영 · 김륜겸
+    </div>
+  </div>
+  <div class="right">
+    <div class="anim" style="font-size:12px;font-family:var(--mono);letter-spacing:.12em;color:var(--ink-faint);">실험 사진 미리보기</div>
+    <div class="anim preview-grid">
+      <div class="img-card">
+        <img src="img/0TT.jpg" alt="0h 시험관" style="object-fit:cover;">
+        <div class="cap">0h · 시험관</div>
+      </div>
+      <div class="img-card">
+        <img src="img/70TT.jpg" alt="70h 시험관" style="object-fit:cover;">
+        <div class="cap">70h · 시험관</div>
+      </div>
+      <div class="img-card">
+        <img src="img/0sugar.jpg" alt="설탕 0h" style="object-fit:cover;">
+        <div class="cap">0h · 설탕</div>
+      </div>
+      <div class="img-card">
+        <img src="img/70sugar.jpg" alt="설탕 70h" style="object-fit:cover;">
+        <div class="cap">70h · 설탕</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     S2 · 이론적 배경
+═══════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="topbar">
+    <span class="topbar-tag">이론</span>
+    <span class="topbar-title">왜 자일리톨인가?</span>
+    <span class="topbar-right">02 / 06</span>
+  </div>
+  <div style="padding:68px 48px 40px;display:flex;flex-direction:column;gap:20px;height:100%;">
+    <div class="anim body-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;">
+      <!-- 설탕 -->
+      <div class="theory-card anim" style="background:var(--orange-lt);border:1.5px solid #F5C4AF;">
+        <div class="sec-tag" style="background:#FEE0D2;color:var(--orange);">설탕 (6탄당)</div>
+        <div class="headline" style="color:var(--orange);">충치 유발</div>
+        <div class="flow">
+          <div class="flow-item">설탕 흡수</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-item">젖산 분해</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-item" style="color:var(--orange);">pH↓ 산 생성</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-item" style="color:var(--orange);">에나멜 부식</div>
+        </div>
+        <div class="desc">pH <strong style="color:var(--orange);font-size:20px;">5.5</strong> 이하가 되면 에나멜층이 녹기 시작해 충치 발생</div>
+      </div>
+      <!-- 자일리톨 -->
+      <div class="theory-card anim" style="background:var(--green-lt);border:1.5px solid #B4DEC9;">
+        <div class="sec-tag" style="background:#C8EDD9;color:var(--green);">자일리톨 (5탄당)</div>
+        <div class="headline" style="color:var(--green);">충치 억제</div>
+        <div class="flow">
+          <div class="flow-item">균이 흡수<br>(설탕 착각)</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-item" style="color:var(--green);">분해 불가</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-item" style="color:var(--green);">헛된 순환</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-item" style="color:var(--green);">균 성장 억제</div>
+        </div>
+        <div class="desc">5탄당 구조이기 때문에 흡수해도 <strong style="color:var(--green);font-size:18px;">에너지로 분해 불가</strong> → 산 미생성</div>
+      </div>
+    </div>
+    <!-- 충치 임계 pH bar -->
+    <div class="anim panel" style="padding:18px 28px;display:flex;align-items:center;gap:24px;">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;">pH 스케일</div>
+      <div style="flex:1;position:relative;">
+        <div style="height:20px;border-radius:6px;background:linear-gradient(to right,#DC2626,#F97316,#FACC15,#4ADE80,#22D3EE);"></div>
+        <div style="position:absolute;left:calc(5.5/14*100% - 1px);top:-4px;width:2px;height:28px;background:var(--orange);"></div>
+        <div style="position:absolute;left:calc(5.5/14*100%);top:24px;font-family:var(--mono);font-size:11px;color:var(--orange);transform:translateX(-50%);">충치 임계 5.5</div>
+      </div>
+      <div style="display:flex;gap:16px;">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--orange);">0 산성</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);">7 중성</span>
+        <span style="font-family:var(--mono);font-size:11px;color:#22D3EE;">14 염기성</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     S3 · pH 측정 — 실험 전 (0h)
+═══════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="topbar">
+    <span class="topbar-tag">결과 ①</span>
+    <span class="topbar-title">실험 전 — 0시간</span>
+    <span class="topbar-right">03 / 06</span>
+  </div>
+  <div style="padding:68px 48px 36px;display:flex;flex-direction:column;gap:20px;height:100%;">
+    <div class="anim" style="font-size:15px;color:var(--ink-mid);">세 조건 모두 <strong style="color:var(--ink);">초기 pH 유사</strong> — 실험 기준점</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;flex:1;">
+
+      <!-- 설탕 0h -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:12px;align-items:center;height:100%;justify-content:center;">
+        <div class="img-card" style="width:100%;flex:none;">
+          <img src="img/0sugar.jpg" alt="설탕 0h" style="height:260px;width:100%;object-fit:cover;flex:none;">
+          <div class="cap">설탕 · 0h</div>
+        </div>
+        <div class="ph-badge" style="background:var(--orange-lt);width:100%;">
+          <span class="label" style="color:var(--orange);">INITIAL pH</span>
+          <span class="val" style="color:var(--orange);">6.75</span>
+        </div>
+      </div>
+
+      <!-- 자일리톨 0h -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:12px;align-items:center;height:100%;justify-content:center;">
+        <div class="img-card" style="width:100%;flex:none;">
+          <img src="img/0xylitol.jpg" alt="자일리톨 0h" style="height:260px;width:100%;object-fit:cover;flex:none;">
+          <div class="cap">자일리톨 · 0h</div>
+        </div>
+        <div class="ph-badge" style="background:var(--green-lt);width:100%;">
+          <span class="label" style="color:var(--green);">INITIAL pH</span>
+          <span class="val" style="color:var(--green);">6.68</span>
+        </div>
+      </div>
+
+      <!-- 멸균수 0h -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:12px;align-items:center;height:100%;justify-content:center;">
+        <div class="img-card" style="width:100%;flex:none;">
+          <img src="img/0Sterile.jpg" alt="멸균수 0h" style="height:260px;width:100%;object-fit:cover;flex:none;">
+          <div class="cap">멸균수 · 0h</div>
+        </div>
+        <div class="ph-badge" style="background:var(--blue-lt);width:100%;">
+          <span class="label" style="color:var(--blue);">INITIAL pH</span>
+          <span class="val" style="color:var(--blue);">6.68</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     S4 · pH 측정 — 실험 후 (70h)
+═══════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="topbar">
+    <span class="topbar-tag">결과 ②</span>
+    <span class="topbar-title">실험 후 — 70시간</span>
+    <span class="topbar-right">04 / 06</span>
+  </div>
+  <div style="padding:68px 48px 32px;display:flex;flex-direction:column;gap:14px;height:100%;">
+    <div class="anim" style="font-size:15px;color:var(--ink-mid);">설탕군만 <strong style="color:var(--orange);">극적 산성화</strong> — 자일리톨·멸균수는 중성 유지</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;flex:1;min-height:0;">
+
+      <!-- 설탕 70h -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:10px;align-items:center;height:100%;">
+        <div class="img-card" style="width:100%;flex:none;">
+          <img src="img/70sugar.jpg" alt="설탕 70h" style="height:180px;width:100%;object-fit:cover;flex:none;">
+          <div class="cap">설탕 · 70h</div>
+        </div>
+        <div class="ph-badge" style="background:var(--orange-lt);width:100%;padding:10px 20px;">
+          <span class="label" style="color:var(--orange);">FINAL pH</span>
+          <span class="val" style="color:var(--orange);font-size:32px;">3.74</span>
+        </div>
+        <div class="delta" style="color:var(--orange);font-size:15px;">
+          <span>▼ −3.01</span>
+          <span style="font-size:12px;color:var(--ink-faint);">≈ 1,000배 산성화</span>
+        </div>
+      </div>
+
+      <!-- 자일리톨 70h -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:10px;align-items:center;height:100%;">
+        <div class="img-card" style="width:100%;flex:none;">
+          <img src="img/70xylitol.jpg" alt="자일리톨 70h" style="height:180px;width:100%;object-fit:cover;flex:none;">
+          <div class="cap">자일리톨 · 70h</div>
+        </div>
+        <div class="ph-badge" style="background:var(--green-lt);width:100%;padding:10px 20px;">
+          <span class="label" style="color:var(--green);">FINAL pH</span>
+          <span class="val" style="color:var(--green);font-size:32px;">6.36</span>
+        </div>
+        <div class="delta" style="color:var(--green);font-size:15px;">
+          <span>▼ −0.32</span>
+          <span style="font-size:12px;color:var(--ink-faint);">중성 유지</span>
+        </div>
+      </div>
+
+      <!-- 멸균수 70h -->
+      <div class="anim" style="display:flex;flex-direction:column;gap:10px;align-items:center;height:100%;">
+        <div class="img-card" style="width:100%;flex:none;">
+          <img src="img/70Sterile.jpg" alt="멸균수 70h" style="height:180px;width:100%;object-fit:cover;flex:none;">
+          <div class="cap">멸균수 · 70h</div>
+        </div>
+        <div class="ph-badge" style="background:var(--blue-lt);width:100%;padding:10px 20px;">
+          <span class="label" style="color:var(--blue);">FINAL pH</span>
+          <span class="val" style="color:var(--blue);font-size:32px;">6.92</span>
+        </div>
+        <div class="delta" style="color:var(--blue);font-size:15px;">
+          <span>▲ +0.24</span>
+          <span style="font-size:12px;color:var(--ink-faint);">대사 없음</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     S5 · 시험관 Before → After
+═══════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="topbar">
+    <span class="topbar-tag">결과 ③</span>
+    <span class="topbar-title">시험관 육안 비교 — 0h → 70h</span>
+    <span class="topbar-right">05 / 06</span>
+  </div>
+  <div style="padding:68px 48px 40px;display:flex;flex-direction:column;gap:16px;height:100%;">
+    <div class="anim" style="font-size:15px;color:var(--ink-mid);">색 변화로 확인하는 <strong style="color:var(--ink);">실제 실험 결과</strong></div>
+    <div style="display:flex;align-items:stretch;gap:20px;flex:1;" class="anim">
+
+      <!-- 0h 시험관 -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink-faint);text-align:center;">BEFORE · 0h</div>
+        <div class="img-card" style="flex:1;">
+          <img src="img/0TT.jpg" alt="0h 시험관" style="width:100%;height:100%;max-height:480px;object-fit:cover;">
+          <div class="cap">실험 시작 직전</div>
+        </div>
+      </div>
+
+      <!-- 화살표 -->
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:64px;">
+        <div style="font-size:36px;color:var(--blue);line-height:1;">→</div>
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--ink-faint);text-align:center;">70h<br>배양</div>
+      </div>
+
+      <!-- 70h 시험관 -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--orange);text-align:center;">AFTER · 70h</div>
+        <div class="img-card" style="flex:1;border-color:#F5C4AF;">
+          <img src="img/70TT.jpg" alt="70h 시험관" style="width:100%;height:100%;max-height:480px;object-fit:cover;">
+          <div class="cap" style="color:var(--orange);">배양 70시간 후</div>
+        </div>
+      </div>
+
+      <!-- 결과 요약 -->
+      <div style="width:220px;display:flex;flex-direction:column;gap:12px;justify-content:center;">
+        <div class="panel" style="padding:18px;">
+          <div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-faint);margin-bottom:8px;">설탕</div>
+          <div style="font-family:var(--mono);font-size:32px;font-weight:500;color:var(--orange);">3.74</div>
+          <div style="font-size:12px;color:var(--ink-faint);margin-top:4px;">강산성 · 에나멜 부식</div>
+        </div>
+        <div class="panel" style="padding:18px;">
+          <div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-faint);margin-bottom:8px;">자일리톨</div>
+          <div style="font-family:var(--mono);font-size:32px;font-weight:500;color:var(--green);">6.36</div>
+          <div style="font-size:12px;color:var(--ink-faint);margin-top:4px;">중성 유지</div>
+        </div>
+        <div class="panel" style="padding:18px;">
+          <div style="font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--ink-faint);margin-bottom:8px;">멸균수</div>
+          <div style="font-family:var(--mono);font-size:32px;font-weight:500;color:var(--blue);">6.92</div>
+          <div style="font-size:12px;color:var(--ink-faint);margin-top:4px;">대조군</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     S6 · 결론
+═══════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="topbar">
+    <span class="topbar-tag">결론</span>
+    <span class="topbar-title">자일리톨은 충치 예방 억제제다</span>
+    <span class="topbar-right">06 / 06</span>
+  </div>
+  <div style="padding:68px 48px 40px;display:flex;flex-direction:column;gap:20px;height:100%;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;flex:1;">
+
+      <!-- 설탕 -->
+      <div class="anim panel" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between;border-top:4px solid var(--orange);">
+        <div>
+          <div class="sec-tag" style="background:var(--orange-lt);color:var(--orange);">설탕</div>
+          <div style="font-size:22px;font-weight:900;color:var(--ink);margin:12px 0 8px;line-height:1.2;">강력한<br>산성화</div>
+          <div style="font-size:14px;color:var(--ink-mid);line-height:1.7;">6탄당 분해 → 젖산 생성 → 충치 임계치(5.5) 대폭 하회</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:56px;font-weight:500;color:var(--orange);line-height:1;margin-top:16px;">3.74</div>
+      </div>
+
+      <!-- 자일리톨 -->
+      <div class="anim panel" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between;border-top:4px solid var(--green);">
+        <div>
+          <div class="sec-tag" style="background:var(--green-lt);color:var(--green);">자일리톨</div>
+          <div style="font-size:22px;font-weight:900;color:var(--ink);margin:12px 0 8px;line-height:1.2;">산 생성<br>억제</div>
+          <div style="font-size:14px;color:var(--ink-mid);line-height:1.7;">5탄당 구조 → 분해 불가 → 중성 유지 → <strong>충치 예방</strong></div>
+        </div>
+        <div style="font-family:var(--mono);font-size:56px;font-weight:500;color:var(--green);line-height:1;margin-top:16px;">6.36</div>
+      </div>
+
+      <!-- 멸균수 + 미래 -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="anim panel" style="padding:24px;border-top:4px solid var(--blue);flex:0 0 auto;">
+          <div class="sec-tag" style="background:var(--blue-lt);color:var(--blue);">멸균수 (대조)</div>
+          <div style="font-family:var(--mono);font-size:40px;font-weight:500;color:var(--blue);line-height:1;margin-top:8px;">6.92</div>
+        </div>
+        <div class="anim panel" style="padding:24px;flex:1;">
+          <div style="font-size:12px;font-family:var(--mono);letter-spacing:.1em;color:var(--ink-faint);margin-bottom:10px;">FUTURE RESEARCH</div>
+          <div style="font-size:14px;color:var(--ink-mid);line-height:1.8;">
+            • 시간별 실시간 pH 자동 측정<br>
+            • 다양한 자일리톨 농도 비교<br>
+            • 다른 천연 물질 대사 억제 탐구
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- 핵심 한 줄 -->
+    <div class="anim" style="padding:16px 24px;background:var(--ink);border-radius:12px;text-align:center;">
+      <span style="font-size:18px;font-weight:900;color:#fff;">자일리톨 처리군 pH </span>
+      <span style="font-family:var(--mono);font-size:20px;color:var(--green);font-weight:500;">6.36</span>
+      <span style="font-size:18px;font-weight:900;color:#fff;"> vs 설탕 처리군 </span>
+      <span style="font-family:var(--mono);font-size:20px;color:var(--orange);font-weight:500;">3.74</span>
+      <span style="font-size:18px;font-weight:900;color:var(--ink-faint);"> — 약 </span>
+      <span style="font-family:var(--mono);font-size:22px;color:#fff;font-weight:500;">1,000배</span>
+      <span style="font-size:18px;font-weight:900;color:var(--ink-faint);"> 산성화 차이</span>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+</div><!-- /root -->
+
+<!-- Click / Swipe zones -->
+<div id="click-zones">
+  <div class="zone left" onclick="go(-1)"></div>
+  <div class="zone center"></div>
+  <div class="zone right" onclick="go(1)"></div>
+</div>
+
+<script>
+const TOTAL = 6;
+let cur = 1;
+
+function go(dir) {
+  const nxt = Math.max(1, Math.min(TOTAL, cur + dir));
+  if (nxt === cur) return;
+  document.getElementById('s' + cur).classList.remove('active');
+  cur = nxt;
+  const el = document.getElementById('s' + cur);
+  el.classList.add('active');
+  // restart animations
+  el.querySelectorAll('.anim').forEach(a => {
+    a.style.animation = 'none';
+    a.offsetHeight; // reflow
+    a.style.animation = '';
+  });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+});
+
+// Swipe support (tablet)
+let touchStartX = 0;
+document.addEventListener('touchstart', e => {
+  touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  if (Math.abs(dx) < 50) return;
+  if (dx < 0) go(1);   // swipe left -> next
+  else go(-1);         // swipe right -> prev
+}, { passive: true });
+
+// Scale uniformly, keep 16:9 ratio (no font distortion)
+function scale() {
+  const W = 1280, H = 720;
+  const s = Math.min(window.innerWidth / W, window.innerHeight / H);
+  document.getElementById('deck').style.transform = `scale(${s})`;
+}
+window.addEventListener('resize', scale);
+scale();
+
+// 첫 슬라이드 anim 트리거
+document.getElementById('s1').classList.add('active');
+</script>
+</body>
+</html>
